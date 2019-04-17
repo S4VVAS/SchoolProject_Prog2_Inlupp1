@@ -10,12 +10,7 @@ public class Apparater extends Vardesaker {
 	public Apparater(String namn, int retailPrice, int condition) {
 		super(namn);
 		this.retailPrice = retailPrice;
-		if(condition >= 10)
-			this.condition = 10;
-		else if(condition <= 1)
-			this.condition = 1;
-		else
-			this.condition = condition;
+		this.condition = condition;
 	}
 
 	double calcValue() {

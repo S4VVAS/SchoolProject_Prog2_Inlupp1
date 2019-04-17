@@ -19,11 +19,13 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -35,6 +37,7 @@ public class Main extends Application {
 	TextArea mainWindow;
 	Button show, crash;
 	ComboBox<String> comboBox;
+	CheckBox autoCorrection;
 
 	private void updateTextArea() {
 		mainWindow.clear();
@@ -80,15 +83,18 @@ public class Main extends Application {
 		sortByValue = new RadioButton("Värde");
 		ToggleGroup group = new ToggleGroup();
 
+		sortByName.setTooltip(new Tooltip("Sorterar värdesaker i alfabetisk ordning"));
+		sortByValue.setTooltip(new Tooltip("Sorterar värdesaker med värde"));
 		sortByName.setToggleGroup(group);
 		sortByValue.setToggleGroup(group);
-
 		sortByName.setOnAction(e -> updateTextArea());
 		sortByValue.setOnAction(e -> updateTextArea());
-
 		sortByName.setSelected(true);
 
-		right.getChildren().addAll(new Label("Sortering"), sortByName, sortByValue);
+		autoCorrection = new CheckBox("Rättning");
+		autoCorrection.setTooltip(new Tooltip("Rättar inmatade data så att det är inom den tillåtna gränsen"));
+
+		right.getChildren().addAll(new Label("Sortering:"), sortByName, sortByValue, new Label(), autoCorrection);
 		right.setSpacing(5);
 		right.setPadding(inset);
 		root.setRight(right);
@@ -126,13 +132,11 @@ public class Main extends Application {
 				for (Vardesaker v : items)
 					if (v instanceof Aktier)
 						((Aktier) v).crash();
-
 			updateTextArea();
 		}
 	}
 
 	class CreateVardesak implements EventHandler<ActionEvent> {
-
 		@Override
 		public void handle(ActionEvent arg0) {
 			String selection = comboBox.getSelectionModel().getSelectedItem();
@@ -155,19 +159,19 @@ public class Main extends Application {
 		private void createSmycke() {
 			CreateSmycke createSmycke = new CreateSmycke();
 			Optional<ButtonType> answer = createSmycke.showAndWait();
+
 			if (answer.isPresent() && answer.get() == ButtonType.OK) {
 				if (!createSmycke.getName().trim().isEmpty()) {
 					try {
-						if (Integer.parseInt(createSmycke.getAmtStones()) > -1) {
+						if (correct(Integer.parseInt(createSmycke.getAmtStones())) >= 0) {
 							items.add(new Smycken(createSmycke.getName(), createSmycke.getMaterial(),
-									Integer.parseInt(createSmycke.getAmtStones())));
+									correct(Integer.parseInt(createSmycke.getAmtStones()))));
 						} else
 							falseInputError("Fält får ej understiga 0!");
 					} catch (NumberFormatException e) {
 						falseInputError("Felaktig inmatning!");
 					}
-				}
-				if (createSmycke.getName().trim().isEmpty())
+				} else if (createSmycke.getName().trim().isEmpty())
 					falseInputError("Namn får ej vara tomt!");
 			}
 		}
@@ -178,15 +182,14 @@ public class Main extends Application {
 			if (answer.isPresent() && answer.get() == ButtonType.OK) {
 				if (!createApparat.getName().trim().isEmpty()) {
 					try {
-						if (Integer.parseInt(createApparat.getPrice()) > -1) {
-							items.add(new Apparater(createApparat.getName(), Integer.parseInt(createApparat.getPrice()),
-									Integer.parseInt(createApparat.getCondition())));
-							if (Integer.parseInt(createApparat.getCondition()) > 10)
-								falseInputError("Skicket får inte översiga 10!\nSkicket har automatiskt sätts till 10");
-							else if (Integer.parseInt(createApparat.getCondition()) < 1)
-								falseInputError("Skicket får inte understiga 1!\nSkicket har automatiskt sätts till 1");
+						if (correct(Integer.parseInt(createApparat.getPrice())) >= 0
+								&& correctCondition(Integer.parseInt(createApparat.getCondition())) > 0
+								&& correctCondition(Integer.parseInt(createApparat.getCondition())) <= 10) {
+							items.add(new Apparater(createApparat.getName(),
+									correct(Integer.parseInt(createApparat.getPrice())),
+									correctCondition(Integer.parseInt(createApparat.getCondition()))));
 						} else
-							falseInputError("Fält får ej understiga 0!");
+							falseInputError("Felaktig inmatning!");
 					} catch (NumberFormatException e) {
 						falseInputError("Felaktig inmatning!");
 					}
@@ -201,10 +204,11 @@ public class Main extends Application {
 			if (answer.isPresent() && answer.get() == ButtonType.OK) {
 				if (!createAktie.getName().trim().isEmpty()) {
 					try {
-						if (Integer.parseInt(createAktie.getPrice()) > -1
-								&& Integer.parseInt(createAktie.getAmount()) > -1) {
-							items.add(new Aktier(createAktie.getName(), Integer.parseInt(createAktie.getAmount()),
-									Integer.parseInt(createAktie.getPrice())));
+						if (correct(Integer.parseInt(createAktie.getPrice())) >= 0
+								&& correct(Integer.parseInt(createAktie.getAmount())) >= 0) {
+							items.add(new Aktier(createAktie.getName(),
+									correct(Integer.parseInt(createAktie.getAmount())),
+									correct(Integer.parseInt(createAktie.getPrice()))));
 						} else
 							falseInputError("Fält får ej understiga 0!");
 					} catch (NumberFormatException e) {
@@ -222,6 +226,22 @@ public class Main extends Application {
 			alert.setTitle("Fel!");
 			alert.setHeaderText(null);
 			alert.showAndWait();
+		}
+
+		private int correctCondition(int value) {
+			if (autoCorrection.isSelected())
+				if (value < 1)
+					return 1;
+				else if (value > 10)
+					return 10;
+			return value;
+		}
+
+		private int correct(int value) {
+			if (autoCorrection.isSelected())
+				if (value < 0)
+					return 0;
+			return value;
 		}
 	}
 
