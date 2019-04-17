@@ -1,4 +1,4 @@
-// Savvas Giortsis Sagi2536 (19980111-4852)
+// Savvas Giortsis Sagi2536
 
 package application;
 
